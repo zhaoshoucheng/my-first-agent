@@ -6,6 +6,7 @@
 *.dylib
 bin/
 dist/
+agent
 
 # Test binary, built with `go test -c`
 *.test
@@ -16,6 +17,7 @@ coverage.txt
 
 # Dependency directories
 vendor/
+.gocache/
 
 # Go workspace file
 go.work

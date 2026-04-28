@@ -2,70 +2,54 @@ package main
 
 import (
 	"context"
+	"flag"
 	"fmt"
 	"log"
-	"os"
 
-	"github.com/shoucheng/my-first-agent/internal/agent"
-	"github.com/shoucheng/my-first-agent/internal/llm"
-	"github.com/shoucheng/my-first-agent/internal/memory"
-	"github.com/shoucheng/my-first-agent/internal/tools"
-	"github.com/shoucheng/my-first-agent/pkg/types"
+	"github.com/shoucheng/my-first-agent/domain/account"
+	"github.com/shoucheng/my-first-agent/domain/llm"
+	"github.com/shoucheng/my-first-agent/infra/config"
+	"github.com/shoucheng/my-first-agent/internal/llm/langchaingo/llms"
 )
 
 func main() {
+	cfgPath := flag.String("config", "config/config.yaml", "path to YAML config")
+	model := flag.String("model", "claude-3-5-sonnet-20241022", "model name to call")
+	prompt := flag.String("prompt", "用一句中文介绍你自己。", "prompt to send")
+	flag.Parse()
+
 	ctx := context.Background()
 
-	// 从环境变量加载配置
-	apiKey := os.Getenv("OPENAI_API_KEY")
-	if apiKey == "" {
-		log.Fatal("OPENAI_API_KEY environment variable is not set")
+	// 1. 读 yaml 配置（infra），存入全局单例。
+	if err := config.Init(*cfgPath); err != nil {
+		log.Fatalf("init config: %v", err)
 	}
 
-	// 创建 LLM 客户端
-	llmClient, err := llm.NewClient(llm.Config{
-		Provider:    llm.ProviderOpenAI,
-		APIKey:      apiKey,
-		Model:       "gpt-4",
-		Temperature: 0.7,
-		MaxTokens:   2000,
+	// 2. 各 domain 模块独立 Init，按依赖顺序：
+	//    account 不依赖任何 domain；llm 运行期会调 account.Default()。
+	if err := account.Init(ctx); err != nil {
+		log.Fatalf("init account: %v", err)
+	}
+	if err := llm.Init(ctx); err != nil {
+		log.Fatalf("init llm: %v", err)
+	}
+
+	if len(llm.Default().Accounts()) == 0 {
+		log.Fatalf("no accounts loaded")
+	}
+
+	// 3. 调一次模型：根据 model 名路由账号 → 建 client → GenerateContent。
+	resp, err := llm.Default().GenerateContent(ctx, *model, []llms.MessageContent{
+		{
+			Role:  llms.ChatMessageTypeHuman,
+			Parts: []llms.ContentPart{llms.TextContent{Text: *prompt}},
+		},
 	})
 	if err != nil {
-		log.Fatalf("Failed to create LLM client: %v", err)
+		log.Fatalf("generate: %v", err)
 	}
-
-	// 创建记忆
-	memory := memory.NewBufferMemory(10)
-
-	// 创建工具注册表
-	toolRegistry := tools.NewRegistry()
-
-	// 注册工具
-	if err := toolRegistry.Register(tools.NewCalculator()); err != nil {
-		log.Fatalf("Failed to register calculator tool: %v", err)
+	if len(resp.Choices) == 0 {
+		log.Fatalf("empty response")
 	}
-
-	// 创建智能体
-	agentConfig := types.AgentConfig{
-		MaxIterations: 10,
-		Temperature:   0.7,
-		Verbose:       true,
-		Model:         "gpt-4",
-	}
-
-	myAgent, err := agent.New(llmClient, memory, toolRegistry, agentConfig)
-	if err != nil {
-		log.Fatalf("Failed to create agent: %v", err)
-	}
-
-	// 运行智能体
-	question := "What is 25 * 4 + 10?"
-	fmt.Printf("Question: %s\n", question)
-
-	response, err := myAgent.Run(ctx, question)
-	if err != nil {
-		log.Fatalf("Agent execution failed: %v", err)
-	}
-
-	fmt.Printf("\nFinal Answer: %s\n", response)
+	fmt.Println(resp.Choices[0].Content)
 }

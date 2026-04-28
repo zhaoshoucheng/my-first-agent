@@ -1,11 +1,24 @@
 # 智能体配置文件
+#
+# 各模块独立解析自己的顶层段；不要在一个模块的段里嵌套另一个模块的配置，
+# 这样可以保证模块之间在配置层也没有耦合。
 
-# LLM 配置
-llm:
-  provider: "openai"  # openai, anthropic, azure
-  model: "gpt-4"
-  temperature: 0.7
-  max_tokens: 2000
+# 账号配置 — 由 domain/account 模块读取
+account:
+  source:
+    type: file              # file | db
+    file:
+      dir: ./config/accounts
+    db:
+      driver: ""
+      dsn: ""
+      table: ""
+      username: ""
+      password: ""
+
+# LLM 配置 — 由 domain/llm 模块读取
+# 目前没有必填字段，未来会加默认温度、超时、重试策略等
+llm: {}
 
 # 智能体配置
 agent:
