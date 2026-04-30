@@ -2,20 +2,21 @@ package llm
 
 import (
 	"context"
+	"encoding/base64"
 	"fmt"
 
 	"github.com/shoucheng/my-first-agent/domain/account"
 	"github.com/shoucheng/my-first-agent/internal/llm/langchaingo/llms"
 	"github.com/shoucheng/my-first-agent/internal/llm/langchaingo/llms/anthropic"
+	"github.com/shoucheng/my-first-agent/internal/llm/langchaingo/llms/googleai"
+	googlegenai "github.com/shoucheng/my-first-agent/internal/llm/langchaingo/llms/googleai/genai"
 	"github.com/shoucheng/my-first-agent/internal/llm/langchaingo/llms/openai"
 )
 
 // newClient 把一个 Account 实例化为 langchaingo 的 llms.Model。
 //
 // 这是包私有 helper，由 Service 在懒加载时调用；外部不应直接调用。
-//
-// 第一版只实现 anthropic 与 azure-openai；其它 Provider 返回 not-implemented。
-func newClient(_ context.Context, acc *account.Account) (llms.Model, error) {
+func newClient(ctx context.Context, acc *account.Account) (llms.Model, error) {
 	if err := acc.Validate(); err != nil {
 		return nil, fmt.Errorf("llm.newClient: invalid account %q: %w", acc.Name, err)
 	}
@@ -24,7 +25,9 @@ func newClient(_ context.Context, acc *account.Account) (llms.Model, error) {
 		return newAnthropic(acc)
 	case account.ProviderAzureOpenAI:
 		return newAzureOpenAI(acc)
-	case account.ProviderAwsBedrock, account.ProviderGcpVertexAI:
+	case account.ProviderGcpVertexAI:
+		return newGemini(ctx, acc)
+	case account.ProviderAwsBedrock:
 		return nil, fmt.Errorf("llm.newClient: provider %q is not implemented yet", acc.Provider)
 	default:
 		return nil, fmt.Errorf("llm.newClient: unknown provider %q", acc.Provider)
@@ -39,6 +42,35 @@ func newAnthropic(acc *account.Account) (llms.Model, error) {
 		opts = append(opts, anthropic.WithBaseURL(acc.Credential.BaseURL))
 	}
 	return anthropic.New(opts...)
+}
+
+// newGemini 构造 Gemini / Vertex AI 客户端。
+//
+// 账号 Credential 复用通用字段：
+//   - 仅设置 APIKey  → 走 Gemini Developer API
+//   - 同时设置 ProjectID + Region → 走 Vertex AI（APIKey 这时被解释为
+//     base64 编码的 GCP 服务账号 JSON，参考 account.types.go 的注释）
+func newGemini(ctx context.Context, acc *account.Account) (llms.Model, error) {
+	cred := acc.Credential
+	opts := []googleai.Option{}
+	useVertex := cred.ProjectID != "" && cred.Region != ""
+	if useVertex {
+		opts = append(opts,
+			googleai.WithCloudProject(cred.ProjectID),
+			googleai.WithCloudLocation(cred.Region),
+		)
+		// APIKey 在 vertex 模式下被解释为 base64 编码的服务账号 JSON。
+		if cred.APIKey != "" {
+			decoded, err := decodeBase64Credential(cred.APIKey)
+			if err != nil {
+				return nil, fmt.Errorf("gcp-vertex-ai account %q: invalid base64 credential: %w", acc.Name, err)
+			}
+			opts = append(opts, googleai.WithCredentialsJSON(decoded))
+		}
+	} else {
+		opts = append(opts, googleai.WithAPIKey(cred.APIKey))
+	}
+	return googlegenai.New(ctx, opts...)
 }
 
 func newAzureOpenAI(acc *account.Account) (llms.Model, error) {
@@ -60,4 +92,11 @@ func newAzureOpenAI(acc *account.Account) (llms.Model, error) {
 		openai.WithModel(cred.DeploymentName),
 	}
 	return openai.New(opts...)
+}
+
+func decodeBase64Credential(s string) ([]byte, error) {
+	if data, err := base64.StdEncoding.DecodeString(s); err == nil {
+		return data, nil
+	}
+	return base64.RawStdEncoding.DecodeString(s)
 }

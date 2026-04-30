@@ -3,24 +3,17 @@ package account
 import (
 	"context"
 	"errors"
-)
 
-// DBConfig 数据库账号源配置。第一版未实现，仅占位。
-type DBConfig struct {
-	Driver   string `yaml:"driver"   json:"driver"`
-	DSN      string `yaml:"dsn"      json:"dsn"`
-	Table    string `yaml:"table"    json:"table"`
-	Username string `yaml:"username,omitempty" json:"username,omitempty"`
-	Password string `yaml:"password,omitempty" json:"password,omitempty"`
-}
+	"github.com/shoucheng/my-first-agent/infra/config"
+)
 
 // DBLoader 数据库账号加载器（占位）。
 type DBLoader struct {
-	Config DBConfig
+	Config config.DBConfig
 }
 
 // NewDBLoader 占位构造。
-func NewDBLoader(cfg DBConfig) *DBLoader {
+func NewDBLoader(cfg config.DBConfig) *DBLoader {
 	return &DBLoader{Config: cfg}
 }
 

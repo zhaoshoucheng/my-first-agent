@@ -4,22 +4,19 @@ import (
 	"context"
 	"fmt"
 	"sort"
+	"strings"
+
+	"github.com/shoucheng/my-first-agent/infra/config"
 )
 
 // Service 账号服务：在启动时通过 SourceConfig 选定的 Loader 把账号读到内存中，
-// 之后对外提供按名查询、列表等能力。
-//
-// 当前实现是一次性快照（不热更新）。后续如果要支持热更新，
-// 在此包内加一个 Reload(ctx) 方法即可，对外 API 不变。
-//
-// 并发安全。
 type Service struct {
 	accounts map[string]*Account
 }
 
 // 任何配置错误、加载错误或账号校验错误都会导致构造失败。
-func NewService(ctx context.Context, cfg SourceConfig) (*Service, error) {
-	loader, err := cfg.NewLoader()
+func NewService(ctx context.Context, cfg config.SourceConfig) (*Service, error) {
+	loader, err := NewLoader(cfg)
 	if err != nil {
 		return nil, fmt.Errorf("account.NewService: %w", err)
 	}
@@ -67,4 +64,48 @@ func (s *Service) Names() []string {
 // Count 当前注册的账号数量。
 func (s *Service) Count() int {
 	return len(s.accounts)
+}
+
+// providerForModel 按 model 名前缀推断它属于哪个 Provider。
+//
+// 这是一份内置的最小路由规则，覆盖目前已实现的三个 Provider：
+//   - claude-*               → anthropic
+//   - gpt-* / o1-* / o3-*    → azure-openai
+//   - gemini-*               → gcp-vertex-ai
+//
+// 后续如果路由规则变复杂（按 region、按 tag、按显式映射表等），
+// 把这里换成一个可配置的 router 即可，不影响 Service 的对外签名。
+func providerForModel(model string) (Provider, error) {
+	m := strings.ToLower(model)
+	switch {
+	case strings.HasPrefix(m, "claude-"):
+		return ProviderAnthropic, nil
+	case strings.HasPrefix(m, "gpt-"), strings.HasPrefix(m, "o1-"), strings.HasPrefix(m, "o3-"):
+		return ProviderAzureOpenAI, nil
+	case strings.HasPrefix(m, "gemini-"):
+		return ProviderGcpVertexAI, nil
+	default:
+		return "", fmt.Errorf("llm: cannot route model %q to a known provider", model)
+	}
+}
+
+// PickAccountForModel 根据 model 名找一个可用账号：先推断 Provider，
+// 再到给定账号集合里选第一个匹配该 Provider 的账号。
+//
+// 选第一个是当下的简化策略；多账号场景下未来可加权重 / 限流 / 故障转移。
+func (s *Service) PickAccountForModel(model string) (*Account, error) {
+	want, err := providerForModel(model)
+	if err != nil {
+		return nil, err
+	}
+	for _, name := range s.Names() {
+		acc, err := s.Get(name)
+		if err != nil {
+			continue
+		}
+		if acc.Provider == want {
+			return acc, nil
+		}
+	}
+	return nil, fmt.Errorf("llm: no account configured for provider %q (model %q)", want, model)
 }

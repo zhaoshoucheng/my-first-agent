@@ -26,10 +26,8 @@ func main() {
 	}
 
 	// 2. 各 domain 模块独立 Init，按依赖顺序：
-	//    account 不依赖任何 domain；llm 运行期会调 account.Default()。
-	if err := account.Init(ctx); err != nil {
-		log.Fatalf("init account: %v", err)
-	}
+	account.Init(ctx)
+
 	if err := llm.Init(ctx); err != nil {
 		log.Fatalf("init llm: %v", err)
 	}

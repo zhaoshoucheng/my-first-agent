@@ -11,21 +11,22 @@ import (
 
 // Service 是 LLM 模块对外的唯一入口。
 //
-// 内部只维护一个按账号名缓存的 langchaingo Model 池（双锁懒加载，并发安全）。
-// 账号集合不再被 Service 持有，而是运行期通过 account.Default() 现取，
-// 这样 LLM 模块的构造不依赖账号模块的实例 — 解耦。
+// 内部维护两个东西：
+//   - accountSvc：账号源（可注入；默认是 account.Default()）
+//   - clients   ：按账号名缓存的 langchaingo Model 池（双锁懒加载，并发安全）
 //
-// 外部调用方（如 agent）只需要持有 *Service，运行期通过 Client(ctx, name)
-// 拿到 Model 即可调 GenerateContent。
+// 外部调用方（如 agent）只需要持有 *Service，运行期通过
+// GenerateContent(ctx, model, messages, opts...) 即可发起对话。
 type Service struct {
 	mu      sync.RWMutex
 	clients map[string]llms.Model
 }
 
 // NewService 构造一个独立的 LLM 服务实例。一般不直接调用 — 业务代码应
-// 走 llm.Init / llm.Default 拿包内单例。仅在测试或需要多实例隔离时使用。
 func NewService() *Service {
-	return &Service{clients: make(map[string]llms.Model)}
+	return &Service{
+		clients: make(map[string]llms.Model),
+	}
 }
 
 // clientFor 是包内通用的"取账号→拿/建 client"路径，供 Client 与
@@ -70,7 +71,7 @@ func (s *Service) GenerateContent(
 	messages []llms.MessageContent,
 	opts ...llms.CallOption,
 ) (*llms.ContentResponse, error) {
-	acc, err := pickAccountForModel(model)
+	acc, err := account.Default().PickAccountForModel(model)
 	if err != nil {
 		return nil, err
 	}
@@ -80,14 +81,4 @@ func (s *Service) GenerateContent(
 	}
 	all := append([]llms.CallOption{llms.WithModel(model)}, opts...)
 	return client.GenerateContent(ctx, messages, all...)
-}
-
-// Accounts 列出当前可用的所有账号名。直接转发到 account.Default()。
-func (s *Service) Accounts() []string {
-	return account.Default().Names()
-}
-
-// Account 暴露底层账号实体（agent 在选模型时可能需要看 Provider 等元信息）。
-func (s *Service) Account(name string) (*account.Account, error) {
-	return account.Default().Get(name)
 }

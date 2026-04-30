@@ -14,7 +14,7 @@ type Provider string
 
 const (
 	ProviderAnthropic   Provider = "anthropic"     // anthropic 官方
-	ProviderAzureOpenAI Provider = "azure-openai"  // 微软 azure 上的 openai 部署
+	ProviderAzureOpenAI Provider = "openai"        // 微软 azure 上的 openai 部署
 	ProviderAwsBedrock  Provider = "aws-bedrock"   // aws bedrock（暂未实现）
 	ProviderGcpVertexAI Provider = "gcp-vertex-ai" // gcp vertex（暂未实现）
 )
