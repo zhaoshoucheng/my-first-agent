@@ -52,5 +52,6 @@
 ## 啃的顺序建议
 
 LLM（B）→ 工具（C）→ Agent 核心（D）已经是当前重点。
-D 层内部从"记忆 → 提示词 → 事件/流式"逐步推进，再往上做 E（会话/调度）、F（服务端）。
-当前实际进展见 [status.md](./status.md)。
+D 层内部从"记忆 → 提示词 → 事件/流式"逐步推进；E/F 不做（收缩为接口，见纲领）。
+当前实际进展见 [status.md](./status.md)；本工程自身如何组织这些层，
+见 [../architecture/agent-core.md](../architecture/agent-core.md)。

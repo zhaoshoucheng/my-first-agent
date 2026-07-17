@@ -17,6 +17,8 @@
 - **[rules.md](./rules.md)** — 两条硬性红线（禁品牌字眼、禁硬编码密钥）。**每次必读。**
 - **[module-map.md](./module-map.md)** — 参考工程 `agent-server` 的 6 层模块地图，啃的顺序。
 - **[status.md](./status.md)** — 当前进展对照表 + Roadmap（最常更新的文件）。
+- **[../architecture/agent-core.md](../architecture/agent-core.md)** — 本工程自身的目标架构：
+  事件流为中心的 Agent 核心设计（主循环逐步拆解、模块/包布局、设计决策、实施路线）。
 
 ## 工作方式
 

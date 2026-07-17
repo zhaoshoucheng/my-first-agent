@@ -62,13 +62,18 @@ Run a single test: `go test -v -run TestName ./internal/tools/...`
   search / file / terminal / browser）；`sandbox/`（本地沙箱）；`executor/`；`streaming/`。
   共享接口 `Tool`（Name / Description / Execute）定义在 `pkg/types/types.go`。
 - **Agent 核心** — `cmd/agent/agent_runtime.go` 的 `Agent.Run` 实现 function-calling 风格的
-  工具调用循环（Thought→Action→Observation，已跑通）。
-  `internal/memory/`（空，待做记忆）、`internal/prompt/templates.go`（骨架模板）。
+  工具调用循环（已跑通，将按目标架构重写为事件驱动）。
+  **目标架构见 [`docs/architecture/agent-core.md`](docs/architecture/agent-core.md)**，
+  骨架包（接口壳已建）：`internal/event/`（事件流 + Sink 外化）、`internal/task/`
+  （task_id→事件历史 + 计划）、`internal/agent/`（上下文组装）、`internal/input/`
+  （输入边界 Source）、`internal/prompt/templates/`（分段系统提示词模板）。
 
 **入口流程：** `cmd/agent/main.go` 初始化 config → account → llm → 工具 registry（带本地沙箱）
 → 构造 `Agent` → `Agent.Run(ctx, prompt)` 跑工具调用循环直到拿到最终答复或达到最大迭代。
 
-**待做（未开始）：** 记忆、计划/鲁棒性、事件总线、会话与调度、服务端。详见 `docs/progress/status.md`。
+**待做：** 主循环事件驱动改造、上下文组装实现、REPL/流式、计划元工具、修复链、
+滑动窗口、持久化（实施路线 M1–M8 见架构文档 §8）。E 会话调度 / F 服务端不做。
+详见 `docs/progress/status.md`。
 
 **Configuration:** `config/config.yaml` for LLM/agent/memory/tools settings. API keys come from environment variables (see `.env.example`).
 

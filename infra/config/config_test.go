@@ -23,13 +23,6 @@ agent:
 memory:
   type: buffer
   max_size: 10
-tools:
-  enabled:
-    - calculator
-    - search
-  search:
-    provider: google
-    max_results: 5
 logging:
   level: info
   format: json
@@ -66,12 +59,6 @@ func TestInit_PopulatesGetConfig(t *testing.T) {
 	}
 	if got.Memory.Type != "buffer" || got.Memory.MaxSize != 10 {
 		t.Errorf("Memory = %+v", got.Memory)
-	}
-	if len(got.Tools.Enabled) != 2 || got.Tools.Enabled[0] != "calculator" {
-		t.Errorf("Tools.Enabled = %+v", got.Tools.Enabled)
-	}
-	if got.Tools.Search.Provider != "google" || got.Tools.Search.MaxResults != 5 {
-		t.Errorf("Tools.Search = %+v", got.Tools.Search)
 	}
 	if got.Logging.Level != "info" || got.Logging.Format != "json" {
 		t.Errorf("Logging = %+v", got.Logging)

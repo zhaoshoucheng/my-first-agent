@@ -28,8 +28,9 @@ func NewBuiltinRegistry(sb sandbox.Sandbox) (*tools.Registry, error) {
 		NewOmniSearch(),
 	}
 	for _, t := range ts {
-		err := registry.Register(t)
-		return registry, err
+		if err := registry.Register(t); err != nil {
+			return nil, err
+		}
 	}
 	return registry, nil
 }
