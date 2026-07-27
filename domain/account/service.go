@@ -69,9 +69,10 @@ func (s *Service) Count() int {
 // providerForModel 按 model 名前缀推断它属于哪个 Provider。
 //
 // 这是一份内置的最小路由规则，覆盖目前已实现的三个 Provider：
-//   - claude-*               → anthropic
-//   - gpt-* / o1-* / o3-*    → azure-openai
-//   - gemini-*               → gcp-vertex-ai
+//   - claude-*                       → anthropic
+//   - gpt-* / o1-* / o3-* / sora-*   → azure-openai（sora 走 azure 上的 sora 部署）
+//   - gemini-* / veo-*               → gcp-vertex-ai
+//   - seedance-* / dreamina-*        → modelark
 //
 // 后续如果路由规则变复杂（按 region、按 tag、按显式映射表等），
 // 把这里换成一个可配置的 router 即可，不影响 Service 的对外签名。
@@ -80,32 +81,73 @@ func providerForModel(model string) (Provider, error) {
 	switch {
 	case strings.HasPrefix(m, "claude-"):
 		return ProviderAnthropic, nil
-	case strings.HasPrefix(m, "gpt-"), strings.HasPrefix(m, "o1-"), strings.HasPrefix(m, "o3-"):
+	case strings.HasPrefix(m, "gpt-"), strings.HasPrefix(m, "o1-"), strings.HasPrefix(m, "o3-"), strings.HasPrefix(m, "sora-"):
 		return ProviderAzureOpenAI, nil
-	case strings.HasPrefix(m, "gemini-"):
+	case strings.HasPrefix(m, "gemini-"), strings.HasPrefix(m, "veo-"):
 		return ProviderGcpVertexAI, nil
+	case strings.HasPrefix(m, "seedance-"), strings.HasPrefix(m, "dreamina-"):
+		return ProviderModelArk, nil
 	default:
 		return "", fmt.Errorf("llm: cannot route model %q to a known provider", model)
 	}
 }
 
 // PickAccountForModel 根据 model 名找一个可用账号：先推断 Provider，
-// 再到给定账号集合里选第一个匹配该 Provider 的账号。
+// 再到账号集合里挑一个匹配该 Provider 的账号。
 //
-// 选第一个是当下的简化策略；多账号场景下未来可加权重 / 限流 / 故障转移。
+// 选择规则（解决"同一 Provider 有多个账号"的歧义，例如 azure-openai 同时被
+// gpt 文本和 sora 视频使用）：
+//  1. 该 Provider 只有一个账号 → 直接用；
+//  2. 多个时，优先按账号名与 model 名匹配：名字完全相等 > 账号名是 model 前缀
+//     （如账号 sora-2 服务 model sora-2-pro）> model 是账号名前缀；
+//  3. 都匹配不上 → 退回按名字排序的第一个（此时是有歧义的，靠给账号起名规避）。
+//
+// 建议把账号名起成对应的 model 名（如账号 sora-2 服务 sora-* 视频），即可稳定命中。
 func (s *Service) PickAccountForModel(model string) (*Account, error) {
 	want, err := providerForModel(model)
 	if err != nil {
 		return nil, err
 	}
+	var candidates []*Account
 	for _, name := range s.Names() {
 		acc, err := s.Get(name)
 		if err != nil {
 			continue
 		}
 		if acc.Provider == want {
-			return acc, nil
+			candidates = append(candidates, acc)
 		}
 	}
-	return nil, fmt.Errorf("llm: no account configured for provider %q (model %q)", want, model)
+	switch len(candidates) {
+	case 0:
+		return nil, fmt.Errorf("llm: no account configured for provider %q (model %q)", want, model)
+	case 1:
+		return candidates[0], nil
+	}
+	if best := bestNameMatch(model, candidates); best != nil {
+		return best, nil
+	}
+	return candidates[0], nil
+}
+
+// bestNameMatch 在同 Provider 的多个账号里，按账号名与 model 名的贴合度挑一个：
+// 完全相等 > 账号名是 model 前缀 > model 是账号名前缀；都不沾则返回 nil。
+func bestNameMatch(model string, accs []*Account) *Account {
+	ml := strings.ToLower(model)
+	var prefixAccModel, prefixModelAcc *Account
+	for _, a := range accs {
+		nl := strings.ToLower(a.Name)
+		switch {
+		case nl == ml:
+			return a // 完全相等，最强匹配
+		case prefixAccModel == nil && strings.HasPrefix(ml, nl):
+			prefixAccModel = a
+		case prefixModelAcc == nil && strings.HasPrefix(nl, ml):
+			prefixModelAcc = a
+		}
+	}
+	if prefixAccModel != nil {
+		return prefixAccModel
+	}
+	return prefixModelAcc
 }

@@ -1,0 +1,20 @@
+{
+  "model": "veo-3.0-generate-001",
+  "prompt": "A red fox running through a snowy forest at dawn, cinematic, slow motion",
+  "negative_prompt": "blurry, low quality, watermark, distorted",
+
+  "image": null,
+  "last_frame": null,
+  "reference_images": [],
+
+  "resolution": "1080p",
+  "aspect_ratio": "16:9",
+  "duration_seconds": 8,
+  "generate_audio": true,
+  "seed": 42,
+  "fps": 24,
+  "number_of_videos": 1,
+  "person_generation": "allow_adult",
+  "enhance_prompt": true,
+  "output_gcs_uri": ""
+}

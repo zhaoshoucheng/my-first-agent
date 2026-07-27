@@ -14,15 +14,16 @@ type Provider string
 
 const (
 	ProviderAnthropic   Provider = "anthropic"     // anthropic 官方
-	ProviderAzureOpenAI Provider = "azure-openai"  // 微软 azure 上的 openai 部署
+	ProviderAzureOpenAI Provider = "azure-openai"  // 微软 azure 上的 openai 部署（gpt 文本 + sora 视频）
 	ProviderAwsBedrock  Provider = "aws-bedrock"   // aws bedrock（暂未实现）
-	ProviderGcpVertexAI Provider = "gcp-vertex-ai" // gcp vertex（暂未实现）
+	ProviderGcpVertexAI Provider = "gcp-vertex-ai" // gcp vertex（gemini 文本 + veo 视频）
+	ProviderModelArk    Provider = "modelark"      // modelark 视频生成（seedance / dreamina）
 )
 
 // IsValid 是否为已知 Provider。
 func (p Provider) IsValid() bool {
 	switch p {
-	case ProviderAnthropic, ProviderAzureOpenAI, ProviderAwsBedrock, ProviderGcpVertexAI:
+	case ProviderAnthropic, ProviderAzureOpenAI, ProviderAwsBedrock, ProviderGcpVertexAI, ProviderModelArk:
 		return true
 	}
 	return false

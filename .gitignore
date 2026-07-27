@@ -7,7 +7,9 @@
 bin/
 dist/
 # 编译产物二进制（注意：不能写成裸 `agent`，否则会连 cmd/agent/ 整个目录一起忽略）
+agent
 /cmd/agent/agent
+output/
 
 # Test binary, built with `go test -c`
 *.test
@@ -30,6 +32,9 @@ go.work
 
 # Local-only notes (含本地路径/品牌字眼，禁止入库)
 .claude/local-notes.md
+
+# 本地账号文件（含真实凭据，禁止入库）
+config/accounts/
 
 # IDE
 .vscode/

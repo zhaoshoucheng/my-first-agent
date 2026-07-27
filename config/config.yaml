@@ -20,6 +20,12 @@ account:
 # 目前没有必填字段，未来会加默认温度、超时、重试策略等
 llm: {}
 
+# 视频生成配置 — 由 domain/video 模块读取
+video:
+  poll_interval_s: 10          # 轮询任务状态的间隔（秒）
+  default_model: "veo-3.0-generate-001"
+  output_dir: ./output/videos  # 生成视频落盘目录
+
 # 智能体配置
 agent:
   max_iterations: 10

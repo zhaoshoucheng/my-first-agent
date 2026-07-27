@@ -1,6 +1,6 @@
 # 当前进展与 Roadmap
 
-> 最近更新：2026-06-11
+> 最近更新：2026-07-23
 > 模块层定义见 [module-map.md](./module-map.md)。✅ = 已落地，🟡 = 简版/部分，❌ = 未开始。
 > **本工程自身的目标架构（事件流为中心的 D 层设计）见
 > [docs/architecture/agent-core.md](../architecture/agent-core.md)**，Roadmap 与其实施路线对齐。
@@ -13,6 +13,7 @@
 | A 账号/凭据 | ✅ | `domain/account/` | file + db 两种 loader，provider 抽象，凭据运行期查询 |
 | A 可观测性 | ❌ | — | tracing / metrics 未做 |
 | B 模型层 | ✅ | `domain/llm/` + `internal/llm/langchaingo/` | vendored langchaingo：openai / anthropic / gemini，含流式 |
+| B 视频生成 | 🟡 | `domain/video/`（`veo/` + `modelark/` + `sora/`） | 三后端：`veo-*`→vertex-ai（genai SDK）、`seedance-*`/`dreamina-*`→modelark、`sora-*`→azure-openai（均 stdlib net/http）。统一入口 `Service.GenerateVideo`（提交→轮询带心跳日志→下载落盘）；支持 spec 文件描述完整请求（`spec.go`，见 [video-request-spec.md](../video-request-spec.md)）。功能：文生/图生首帧/尾帧/参考图 roles + 参数换算（各后端不支持的字段忽略）。sora 参数换算有单测；整体未包成 tool |
 | C 工具 registry | ✅ | `internal/tools/registry.go` | 线程安全注册表 + 工具定义导出 |
 | C 内置工具 | 🟡 | `internal/tools/builtin/` | calculator / search / file / terminal / browser（search 偏 stub） |
 | C 沙箱 | 🟡 | `internal/tools/sandbox/` | 本地沙箱已做，远程沙箱未做 |
@@ -48,6 +49,7 @@
 8. **M8 持久化** — task.Store 换文件/SQLite 实现，获得退出后 resume。
 
 > 另有独立项：工具增强 + 高风险命令权限确认（C 层，可与 M 系列并行）。
+> 视频生成（B 层）已独立落地（`domain/video/`），下一步把它包成 C 层 tool、补测试。
 > 下一步具体做哪个，由我（用户）后续再定。
 
 ## 维护约定

@@ -26,6 +26,8 @@ func NewBuiltinRegistry(sb sandbox.Sandbox) (*tools.Registry, error) {
 		NewBrowserScrollDown(sb),
 		// search
 		NewOmniSearch(),
+		// video
+		NewGenerateVideo(),
 	}
 	for _, t := range ts {
 		if err := registry.Register(t); err != nil {

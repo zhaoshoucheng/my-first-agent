@@ -9,6 +9,7 @@ import (
 
 	"github.com/shoucheng/my-first-agent/domain/account"
 	"github.com/shoucheng/my-first-agent/domain/llm"
+	"github.com/shoucheng/my-first-agent/domain/video"
 	"github.com/shoucheng/my-first-agent/infra/config"
 	"github.com/shoucheng/my-first-agent/internal/tools/builtin"
 	"github.com/shoucheng/my-first-agent/internal/tools/sandbox"
@@ -29,6 +30,7 @@ func main() {
 
 	account.Init(ctx)
 	llm.Init()
+	video.Init()
 
 	settings := config.GetConfig()
 	agentConfig := types.AgentConfig{MaxIterations: 10, Verbose: true}

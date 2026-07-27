@@ -22,6 +22,7 @@ func TestNewBuiltinRegistry(t *testing.T) {
 		"browser_navigate", "browser_view", "browser_click",
 		"browser_input", "browser_scroll_up", "browser_scroll_down",
 		"omni_search",
+		"generate_video",
 	}
 
 	defs := registry.Definitions()

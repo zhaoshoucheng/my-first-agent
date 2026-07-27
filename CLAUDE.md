@@ -58,6 +58,12 @@ Run a single test: `go test -v -run TestName ./internal/tools/...`
   file/db 两种 loader，provider 抽象，凭据运行期查询）。
 - **模型层** — `domain/llm/`（按 provider 分发的 LLM 服务）+ vendored `internal/llm/langchaingo/`
   （openai / anthropic / gemini，含流式）。统一入口 `Service.GenerateContent`。
+- **视频生成** — `domain/video/`（仿 `domain/llm`，按账号 provider 分发）：`veo/`
+  走 gcp-vertex-ai（genai SDK），`modelark/` 走 modelark（stdlib net/http，seedance /
+  dreamina），`sora/` 走 azure-openai（stdlib net/http，sora-2）。统一入口
+  `Service.GenerateVideo`：提交→轮询→下载落盘。参数与图片输入复用 genai 类型
+  （`genai.Image` / `genai.GenerateVideosConfig` / `...Operation`）；可用 spec 文件
+  （`spec.go`）描述完整请求，字段说明见 `docs/video-request-spec.md`。
 - **工具层** — `internal/tools/`：`registry.go` 线程安全注册表；`builtin/`（calculator /
   search / file / terminal / browser）；`sandbox/`（本地沙箱）；`executor/`；`streaming/`。
   共享接口 `Tool`（Name / Description / Execute）定义在 `pkg/types/types.go`。

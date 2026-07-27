@@ -12,6 +12,7 @@ package config
 type Settings struct {
 	Account AccountSettings `yaml:"account" json:"account"`
 	LLM     LLMSettings     `yaml:"llm"     json:"llm"`
+	Video   VideoSettings   `yaml:"video"   json:"video"`
 	Agent   AgentSettings   `yaml:"agent"   json:"agent"`
 	Memory  MemorySettings  `yaml:"memory"  json:"memory"`
 	Logging LoggingSettings `yaml:"logging" json:"logging"`
@@ -70,6 +71,13 @@ type AccountDBSource struct {
 
 // LLMSettings 对应 config.yaml 中的 llm 段。当前没有必填字段，留空结构占位。
 type LLMSettings struct{}
+
+// VideoSettings 对应 config.yaml 中的 video 段，是视频生成模块的运行期参数。
+type VideoSettings struct {
+	PollIntervalS int    `yaml:"poll_interval_s" json:"poll_interval_s"` // 轮询任务状态的间隔（秒）
+	DefaultModel  string `yaml:"default_model"   json:"default_model"`   // 未显式指定时用的默认模型
+	OutputDir     string `yaml:"output_dir"      json:"output_dir"`      // 生成视频落盘目录
+}
 
 // AgentSettings 对应 config.yaml 中的 agent 段。
 type AgentSettings struct {
